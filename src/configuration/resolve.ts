@@ -1,43 +1,64 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 
 import path from "path";
-import nodemonDefaultConfig from "nodemon/lib/config/defaults";
+import defaultConfig from "../nodemon.json";
 import { Configuration } from "./config";
 
-const CONFIGURATION_FILE_NAME = "nodemonster.json";
+export const CONFIGURATION_DEFAULT_FILE_NAME = "nodemonster.json";
 
-// TODO: Create a default configuration to use in this project
-const DEFAULT_CONFIGURATION: Configuration = nodemonDefaultConfig;
+const nodemonConfig: Configuration = defaultConfig;
 
-export function resolveConfiguration(): Configuration {
-  let config = require(path.resolve(process.cwd(), CONFIGURATION_FILE_NAME));
-  const pkgJson = require(path.resolve(process.cwd(), "package.json"));
+type ResolvedConfiguration = {
+  source: "cli" | "file" | "package" | "none";
+  values: Configuration;
+  filePath?: string;
+};
+
+const projectRoot = path.resolve(process.cwd());
+
+function consolidate(config: Configuration = {}, cliOptions: Configuration = {}): Configuration {
+  return {
+    ...nodemonConfig,
+    ...config,
+    script: path.resolve(process.cwd(), config.script),
+    ...cliOptions
+  };
+}
+
+export function resolveConfiguration(
+  configFile: string,
+  cliOptions: Configuration
+): ResolvedConfiguration {
+  let source: ResolvedConfiguration["source"] = "none";
+  let config = require(path.resolve(process.cwd(), configFile));
+  let filePath = path.resolve(process.cwd(), configFile);
 
   if (config == null) {
-    config = pkgJson.nodemonster;
+    const packageJsonPath = path.join(projectRoot, "package.json");
+
+    let packageJSON = null;
+
+    if (!require.resolve(packageJsonPath)) {
+      packageJSON = require(packageJsonPath);
+
+      const pkgJsonConfig = packageJSON?.nodemonster;
+
+      if ("nodemonster" in packageJSON && Object.keys(pkgJsonConfig).length > 0) {
+        source = "package";
+        filePath = packageJsonPath;
+        config = packageJSON?.nodemonster;
+      }
+
+      if (config == null) {
+        source = "cli";
+        config = {};
+      }
+    }
+
+    return {
+      source,
+      filePath,
+      values: consolidate(config, cliOptions)
+    };
   }
-
-  config = config ?? DEFAULT_CONFIGURATION;
-
-  let script = process.argv[2];
-
-  if (script == null) {
-    script = config.script ?? "";
-  }
-
-  if (script == null) {
-    script = pkgJson.main;
-  }
-
-  if (script == null) {
-    throw new Error(
-      "No script provided. Please provide a script in the nodemon.config.json or as an argument."
-    );
-  }
-
-  config.script = path.resolve(process.cwd(), script);
-  console.log("Resolved configuration: ");
-  console.log(config);
-
-  return config;
 }

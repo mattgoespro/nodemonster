@@ -1,9 +1,11 @@
 import path from "path";
+import { CleanWebpackPlugin } from "clean-webpack-plugin";
 import { Configuration } from "webpack";
 
 const config: Configuration = {
   entry: "./src/index.ts",
-  devtool: "cheap-source-map",
+  target: "node",
+  devtool: false,
   output: {
     filename: "nodemonster.js",
     path: path.resolve(__dirname, "dist")
@@ -12,14 +14,15 @@ const config: Configuration = {
     rules: [
       {
         test: /\.ts$/,
-        use: "ts-loader",
+        use: "babel-loader",
         exclude: /node_modules/
       }
     ]
   },
   resolve: {
     extensions: [".ts", ".js"]
-  }
+  },
+  plugins: [new CleanWebpackPlugin()]
 };
 
 export default config;

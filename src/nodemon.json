@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/nodemon.json",
+  "colours": true,
+  "cwd": ".",
+  "execMap": {
+    "js": "node",
+    "ts": "ts-node"
+  },
+  "ignoreRoot": ["**\\node_modules\\**"],
+  "legacyWatch": false,
+  "readable": true,
+  "stdout": true,
+  "verbose": false,
+  "watch": ["src"]
+}

@@ -1,6 +1,6 @@
 import fs from "fs";
 import nodemon from "nodemon";
-import { watchConfigurationChanges } from "../configuration/config";
+import { Configuration, watchConfigurationChanges } from "../configuration/config";
 import { resolveConfiguration } from "../configuration/resolve";
 import { log } from "../core/logging/log";
 import theme from "../core/logging/themes";
@@ -10,26 +10,31 @@ let instance: typeof nodemon = null;
 let fileWatchers: fs.StatWatcher[] = [];
 let firstLoad = true;
 
-export default function startNodemon() {
-  const configuration = resolveConfiguration();
+export default function watch(configFile: string, cliOptions: Configuration) {
+  const resolvedConfiguration = resolveConfiguration(configFile, cliOptions);
+  const configValues = resolvedConfiguration.values;
 
   if (instance == null) {
-    instance = nodemon({ ...configuration, verbose: true })
+    instance = nodemon({ ...resolvedConfiguration, verbose: true })
       .on("start", () => {
         log(theme, "\nHot reload server started.", { color: "lightGreen" });
         log(theme, "Waiting for file changes...", { color: "lightBlue" });
 
-        fileWatchers = watchConfigurationChanges();
+        if (resolvedConfiguration.source === "file") {
+          fileWatchers = watchConfigurationChanges(resolvedConfiguration.filePath, cliOptions);
+        }
       })
       .on("config:update", () => {
         if (firstLoad) {
           firstLoad = false;
           log(theme, "Configuration loaded.", { color: "darkOrange", bold: true });
-          log(theme, `Executor: ${configuration.exec}`, { color: "yellow" });
-          log(theme, `Watch: ${(configuration.watch ?? []).join(", ")}`, { color: "yellow" });
+          log(theme, `Executor: ${configValues.exec}`, { color: "yellow" });
+          log(theme, `Watch: ${(configValues.watch ?? []).join(", ")}`, {
+            color: "yellow"
+          });
 
-          const ignoreFiles = configuration.ignore as string[];
-          const ignoreRoot = configuration.ignoreRoot as string[];
+          const ignoreFiles = configValues.ignore as string[];
+          const ignoreRoot = configValues.ignoreRoot as string[];
           const ignoreStringParts: string[] = [];
 
           if (ignoreFiles?.length > 0) {
@@ -60,7 +65,7 @@ export default function startNodemon() {
       .on("crash", () => {
         log(theme, "Crashed, restarting on change...", { color: "darkOrange" });
       })
-      .on("log", (msg: nodemon.LogMessage & { source?: "launcher" }) => {
+      .on("log", (msg) => {
         if (msg.source) {
           console.log(msg.message);
           return;
