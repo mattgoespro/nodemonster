@@ -7,7 +7,7 @@ export function log(
   message: string,
   options: { color?: keyof LogThemeColors; bold?: boolean } = {}
 ) {
-  const prefix = (msg: string) => `[nodemon] ${msg}`;
+  const prefix = (msg: string) => `[nodemonster] ${msg}`;
 
   message.split("\n").forEach((msgPart) => {
     if (msgPart.trim().length === 0) {
